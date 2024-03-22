@@ -36,7 +36,7 @@ public class UserController {
     public ResponseEntity<?> changeUserInfo(@RequestBody UsersEntity user) {
         try {
             usersMapper.updateUserInfoById(user.getUserId(), user.getPw(), user.getNickName());
-            usersMapper.emptyObserve(user.getObserveToken());
+//            usersMapper.emptyObserve(user.getObserveToken());
             return ResponseEntity.ok(true);
         } catch (Exception e) {
             e.printStackTrace();
@@ -76,11 +76,8 @@ public class UserController {
     @PostMapping("/update")
     public ResponseEntity<?> patchUserData(@RequestBody String observe) {
         Optional<UsersEntity> users = usersMapper.findByObserveToken(observe.replace("\"", ""));
-        if (!(users == null)) {
-            return ResponseEntity.ok(users.get());
-        } else {
-            return ResponseEntity.ok(null);
-        }
+        System.out.println("체크" + users);
+        return ResponseEntity.ok(users);
     }
 
 }

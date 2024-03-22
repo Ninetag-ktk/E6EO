@@ -11,6 +11,7 @@ export default function SignupForm() {
     const [nickname, setNickname] = useState('');
     const [password, setPassword] = useState('');
     const [passwordTwin, setPasswordTwin] = useState('');
+    const observe = window.sessionStorage.getItem("observe");
     
 
     useEffect(() => {
@@ -20,11 +21,11 @@ export default function SignupForm() {
                 "Content-Type": "application/json; charset=utf-8",
                 "Accept": "application/json; charset=utf-8",
             },
-            data: window.sessionStorage.getItem("observe"),
+            data: observe,
         }).then(response => {
+            console.log(response);
             if (response.data != null) {
                 const user = response.data;
-                // console.log(user);
                 setUserid(user.userId);
                 setInnerid(user.innerId);
                 setNickname(user.nickName);
@@ -84,8 +85,8 @@ export default function SignupForm() {
                 observeToken: window.sessionStorage.getItem("observe"),
             }
         }).then(response => {
-            if (response.data == true) {
-                if (password != passwordTwin) {
+            if (response.data === true) {
+                if (password !== passwordTwin) {
                     alert("수정된 비밀번호로 다시 로그인 해주세요");
                     window.localStorage.removeItem("observe");
                     window.sessionStorage.removeItem("observe");
@@ -152,7 +153,6 @@ export default function SignupForm() {
                         id="innerid"
                         readOnly={true}
                         value={innerid}
-                        data-parsley-required
                         data-parsley-minlength="1"
                         data-parsley-maxlength="20"
                     />
