@@ -28,14 +28,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class GoogleAPI {
     @Value("${google.key}")
-    public String googleKey;
+    protected String googleKey;
     protected GoogleToken usersToken = null;
     //  출처: https://ecolumbus.tistory.com/169 [슬기로운 개발자 생활:티스토리]
     @Value("${google.auth}")
     protected String googleAuthUrl;
-    // redirect 경로를 여러개를 지정했을 때
-    // @Value("${google.redirect}")
-    // private List<String> googleRedirectUrlLs;
     @Value("${google.redirect}")
     protected String googleRedirectUrl;
     @Value("${google.client.id}")
@@ -44,6 +41,7 @@ public class GoogleAPI {
     protected String googleClientSecret;
     @Value("${google.scope}")
     protected List<String> googleScopeLs;
+
     @Autowired
     protected UsersMapper usersMapper;
     @Autowired
@@ -62,18 +60,7 @@ public class GoogleAPI {
         return headers;
     }
 
-//    리다이렉트 경로가 여러개일 경우 하나의 문자열로 변환하는 메서드
-//    private String googleRedirectUrl() {
-//        StringBuilder redirect = new StringBuilder();
-//        for (int i=0; i < googleRedirectUrlLs.size(); i++ ) {
-//            redirect.append(googleRedirectUrlLs.get(i));
-//            if (i < googleRedirectUrlLs.size()-1) {
-//                redirect.append("%20");
-//            }
-//        }
-//        return redirect.toString();
-//    }
-
+    // 구글 API 권한 목록을 String 으로 변환
     private String googleScope() {
         StringBuilder scope = new StringBuilder();
         for (int i = 0; i < googleScopeLs.size(); i++) {
@@ -85,11 +72,13 @@ public class GoogleAPI {
         return scope.toString();
     }
 
+    // 구글 계정으로 로그인을 시도했을 때 작동하는 메서드
     public String checkGoogleEmail() {
         googleUserInfo userInfo = getUserInfo();
+        // 해당 구글 계정으로 연동되어있는 계정이 있는지 확인
         Optional<UsersEntity> users = usersMapper.findByInnerId(userInfo.getEmail());
+        // 가입되지 않은 아이디라면
         if (users.isEmpty()) {
-            // 가입되지 않은 아이디라면
             // 자동 가입 처리
             doAutoSignUp(userInfo);
         } else {
