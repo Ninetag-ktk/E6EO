@@ -3,6 +3,7 @@ package e6eo.finalproject.dao;
 import e6eo.finalproject.dto.CategoryMapper;
 import e6eo.finalproject.dto.NotesMapper;
 import e6eo.finalproject.dto.UsersMapper;
+import e6eo.finalproject.entity.CategoryEntity;
 import e6eo.finalproject.entity.UsersEntity;
 import e6eo.finalproject.entityGoogle.GoogleToken;
 import e6eo.finalproject.entityGoogle.googleUserInfo;
@@ -28,14 +29,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class GoogleAPI {
     @Value("${google.key}")
-    public String googleKey;
+    protected String googleKey;
     protected GoogleToken usersToken = null;
     //  출처: https://ecolumbus.tistory.com/169 [슬기로운 개발자 생활:티스토리]
     @Value("${google.auth}")
     protected String googleAuthUrl;
-    // redirect 경로를 여러개를 지정했을 때
-    // @Value("${google.redirect}")
-    // private List<String> googleRedirectUrlLs;
     @Value("${google.redirect}")
     protected String googleRedirectUrl;
     @Value("${google.client.id}")
@@ -44,6 +42,7 @@ public class GoogleAPI {
     protected String googleClientSecret;
     @Value("${google.scope}")
     protected List<String> googleScopeLs;
+
     @Autowired
     protected UsersMapper usersMapper;
     @Autowired
@@ -62,18 +61,7 @@ public class GoogleAPI {
         return headers;
     }
 
-//    리다이렉트 경로가 여러개일 경우 하나의 문자열로 변환하는 메서드
-//    private String googleRedirectUrl() {
-//        StringBuilder redirect = new StringBuilder();
-//        for (int i=0; i < googleRedirectUrlLs.size(); i++ ) {
-//            redirect.append(googleRedirectUrlLs.get(i));
-//            if (i < googleRedirectUrlLs.size()-1) {
-//                redirect.append("%20");
-//            }
-//        }
-//        return redirect.toString();
-//    }
-
+    // 구글 API 권한 목록을 String 으로 변환
     private String googleScope() {
         StringBuilder scope = new StringBuilder();
         for (int i = 0; i < googleScopeLs.size(); i++) {
@@ -85,11 +73,47 @@ public class GoogleAPI {
         return scope.toString();
     }
 
+
+    protected Map<String, String> calcDateTime() {
+        Map<String, String> dateTime = new HashMap<>();
+        String updateTimeStamp = LocalDate.now().withDayOfMonth(1).atStartOfDay() + ":00Z";
+        // 데이터가 조회되는 현재(now)의 월 첫날로 세팅하고(withDayofMonth(1)), 하루를 빼(minusDays(1)) 전 월의 마지막일 설정
+        String startTimeStamp = LocalDate.now().withDayOfMonth(1).minusDays(1).atStartOfDay().plusHours(9) + ":00Z";
+        // 데이터가 조회되는 현재(now)의 월 첫날로 세팅하고(withDayofMonth(1)), 한달을 더해(plusMonths(1)) 전 월의 마지막일 설정
+        String endTimeStamp = LocalDate.now().withDayOfMonth(1).plusMonths(1).atStartOfDay().plusHours(9) + ":00Z";
+        dateTime.put("update", updateTimeStamp);
+        dateTime.put("start", startTimeStamp);
+        dateTime.put("end", endTimeStamp);
+//        System.out.println(dateTime.get("start"));
+//        System.out.println(dateTime.get("end"));
+        return dateTime;
+    }
+
+    protected Map<String, String> calcDateTime(String dateData) {
+        // String dateData을 yyyyMM 또는 yyyyM 형태로 변형
+        String date = dateData.replaceAll("[^\\d]", "");
+        // 위의 데이터에서 연과 월을 추출
+        int year = Integer.parseInt(date.substring(0, 4));
+        int month = Integer.parseInt(date.substring(4, date.length()));
+        Map<String, String> dateTime = new HashMap<>();
+        // 현재의 연월에서 한달을 뺀 데이터
+        String startTimeStamp = LocalDate.of(year, month, 1).minusMonths(1).atStartOfDay().plusHours(9) + ":00Z";
+        // 현재의 연월에서 두달을 더하고 하루를 빼, 다음달의 마지막 일의 데이터를 얻음
+        String endTimeStamp = LocalDate.of(year, month, 1).plusMonths(2).minusDays(1).atStartOfDay().plusHours(9) + ":00Z";
+        dateTime.put("start", startTimeStamp);
+        dateTime.put("end", endTimeStamp);
+//        System.out.println(dateTime.get("start"));
+//        System.out.println(dateTime.get("end"));
+        return dateTime;
+    }
+
+    // 구글 계정으로 로그인을 시도했을 때 작동하는 메서드
     public String checkGoogleEmail() {
         googleUserInfo userInfo = getUserInfo();
+        // 해당 구글 계정으로 연동되어있는 계정이 있는지 확인
         Optional<UsersEntity> users = usersMapper.findByInnerId(userInfo.getEmail());
+        // 가입되지 않은 아이디라면
         if (users.isEmpty()) {
-            // 가입되지 않은 아이디라면
             // 자동 가입 처리
             doAutoSignUp(userInfo);
         } else {
@@ -109,17 +133,44 @@ public class GoogleAPI {
         }
     }
 
+    // 카테고리 목록 디코딩 -> 카테고리DAO 와 노트DAO 에서 사용 중이라 해당 DAO 에서 작성
+    protected Map<String, ArrayList<String>> decodeCategory(String[] categoryList) {
+        Map<String, ArrayList<String>> result = new HashMap<>();
+        ArrayList<String> calendarLists = new ArrayList<>();
+        ArrayList<String> taskLists = new ArrayList<>();
+
+        for (String category : categoryList) {
+//            System.out.println(category);
+            String[] index = category.replace("_", ".").split("\\^");
+            if (index[0].equals("google")) {
+                if (index[1].equals("calendar")) {
+                    calendarLists.add(index[2]);
+                } else if (index[1].equals("tasks")) {
+                    taskLists.add(index[2]);
+                }
+            }
+        }
+        result.put("calendar", calendarLists);
+        result.put("tasks", taskLists);
+        return result;
+    }
+
     // 자동 가입 처리
     private void doAutoSignUp(googleUserInfo userInfo) {
         try {
+            // 만약 해당 구글 이메일로 가입되어있는 계정이 있다면
             if (!(usersMapper.findById(userInfo.getEmail()).isEmpty())) {
+                // 해당 데이터의 이너아이디에 저장
                 usersMapper.mergeWithInnerId(userInfo.getEmail(), userInfo.getEmail(), usersToken.getRefresh_token());
                 log.info("Google 계정 연동 완료");
             } else {
-                new UsersEntity();
+                // 해당 구글 이메일로 가입되어있는 계정이 없다면
                 UsersEntity user = UsersEntity.builder().userId(userInfo.getEmail()).pw(usersToken.getAccess_token().substring(0, 19)).nickName(userInfo.getName()).innerId(userInfo.getEmail()).refreshToken(usersToken.getRefresh_token()).build();
-                System.out.println(user.toString());
+                // System.out.println(user.toString());
+                // 가입처리
                 usersMapper.save(user);
+                CategoryEntity category = CategoryEntity.builder().userId(user.getUserId()).build();
+                categoryMapper.save(category);
                 categoryMapper.insertDefault(user.getUserId(), user.getNickName());
                 log.info("Google 계정 자동 가입 완료");
             }
@@ -226,69 +277,8 @@ public class GoogleAPI {
         // 엑세스 토큰만 리턴하여 바로 사용할 수 있게끔 함
         return token.getAccess_token();
     }
-
-    protected Map<String, ArrayList<String>> decodeCategory(String[] categoryList) {
-        Map<String, ArrayList<String>> result = new HashMap<>();
-        ArrayList<String> calendarLists = new ArrayList<>();
-        ArrayList<String> taskLists = new ArrayList<>();
-
-        for (String category : categoryList) {
-//            System.out.println(category);
-            String[] index = category.replace("_", ".").split("\\^");
-            if (index[0].equals("google")) {
-                if (index[1].equals("calendar")) {
-                    calendarLists.add(index[2]);
-                } else if (index[1].equals("tasks")) {
-                    taskLists.add(index[2]);
-                }
-            }
-        }
-        result.put("calendar", calendarLists);
-        result.put("tasks", taskLists);
-//        System.out.println("캘린더");
-//        for (String calendar : calendarLists) {
-//            System.out.println(calendar);
-//        }
-//        System.out.println("태스크");
-//        for (String task : taskLists) {
-//            System.out.println(task);
-//        }
-        return result;
-    }
-
-    protected Map<String, String> calcDateTime() {
-        Map<String, String> dateTime = new HashMap<>();
-        String updateTimeStamp = LocalDate.now().withDayOfMonth(1).atStartOfDay() + ":00Z";
-        // 데이터가 조회되는 현재(now)의 월 첫날로 세팅하고(withDayofMonth(1)), 하루를 빼(minusDays(1)) 전 월의 마지막일 설정
-        String startTimeStamp = LocalDate.now().withDayOfMonth(1).minusDays(1).atStartOfDay().plusHours(9) + ":00Z";
-        // 데이터가 조회되는 현재(now)의 월 첫날로 세팅하고(withDayofMonth(1)), 한달을 더해(plusMonths(1)) 전 월의 마지막일 설정
-        String endTimeStamp = LocalDate.now().withDayOfMonth(1).plusMonths(1).atStartOfDay().plusHours(9) + ":00Z";
-        dateTime.put("update", updateTimeStamp);
-        dateTime.put("start", startTimeStamp);
-        dateTime.put("end", endTimeStamp);
-//        System.out.println(dateTime.get("start"));
-//        System.out.println(dateTime.get("end"));
-        return dateTime;
-    }
-
-    protected Map<String, String> calcDateTime(String dateData) {
-        // String dateData을 yyyyMM 또는 yyyyM 형태로 변형
-        String date = dateData.replaceAll("[^\\d]", "");
-        // 위의 데이터에서 연과 월을 추출
-        int year = Integer.parseInt(date.substring(0, 4));
-        int month = Integer.parseInt(date.substring(4, date.length()));
-        Map<String, String> dateTime = new HashMap<>();
-        // 현재의 연월에서 한달을 뺀 데이터
-        String startTimeStamp = LocalDate.of(year, month, 1).minusMonths(1).atStartOfDay().plusHours(9) + ":00Z";
-        // 현재의 연월에서 두달을 더하고 하루를 빼, 다음달의 마지막 일의 데이터를 얻음
-        String endTimeStamp = LocalDate.of(year, month, 1).plusMonths(2).minusDays(1).atStartOfDay().plusHours(9) + ":00Z";
-        dateTime.put("start", startTimeStamp);
-        dateTime.put("end", endTimeStamp);
-//        System.out.println(dateTime.get("start"));
-//        System.out.println(dateTime.get("end"));
-        return dateTime;
-    }
-
+    
+    // 사후 구글 연동
     public void mergeGoogleAccount(Map<String, String> observes) {
         UsersEntity login = usersMapper.findByObserveToken(observes.get("loginsession")).get();
         UsersEntity google = usersMapper.findByObserveToken(observes.get("observe")).get();

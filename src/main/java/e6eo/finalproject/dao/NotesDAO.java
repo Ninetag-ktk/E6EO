@@ -247,6 +247,7 @@ public class NotesDAO extends GoogleAPI {
 
     public void deleteNote(NoteData noteData) {
         UsersEntity user = usersMapper.findByObserveToken(noteData.getObserve()).get();
+        // 유저 아이디를 기준으로 모든 노트 삭제
         notesMapper.deleteByIdWithUserId(noteData.getNote().get("id").toString(), user.getUserId());
     }
 }

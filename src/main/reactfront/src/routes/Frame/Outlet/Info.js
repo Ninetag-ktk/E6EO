@@ -12,10 +12,10 @@ export default function SignupForm() {
     const [password, setPassword] = useState('');
     const [passwordTwin, setPasswordTwin] = useState('');
     const observe = window.sessionStorage.getItem("observe");
-    
+
 
     useEffect(() => {
-        axios("/user/update", {
+        axios("/user/info", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json; charset=utf-8",

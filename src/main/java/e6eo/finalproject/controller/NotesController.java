@@ -20,7 +20,7 @@ public class NotesController {
         return ResponseEntity.ok(notesDAO.notesGet(request));
     }
 
-    @PostMapping("/note")
+    @PostMapping("/note") // 노트 인서트
     public ResponseEntity<?> noteInsert(@RequestBody NoteData noteData) {
         try {
             notesDAO.insertNote(noteData);
@@ -30,7 +30,7 @@ public class NotesController {
         }
     }
 
-    @PatchMapping("/note")
+    @PatchMapping("/note") // 노트 수정
     public ResponseEntity<?> notePatch(@RequestBody NoteData noteData) {
         try {
             notesDAO.insertNote(noteData);
@@ -40,7 +40,7 @@ public class NotesController {
         }
     }
 
-    @DeleteMapping("/note")
+    @DeleteMapping("/note") // 노트 삭제
     public ResponseEntity<?> noteDelete(@RequestBody NoteData noteData) {
         try {
             notesDAO.deleteNote(noteData);
