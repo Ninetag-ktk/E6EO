@@ -3,10 +3,7 @@ package e6eo.finalproject.controller;
 import e6eo.finalproject.dao.CategoryDAO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
@@ -22,5 +19,16 @@ public class CategoryController {
     public ResponseEntity<?> getCategories(@RequestBody String observe) {
         Map<String, String> categories = categoryDAO.categoriesGet(observe);
         return ResponseEntity.ok(categories);
+    }
+
+    @PatchMapping("/category")
+    public void updateCategory(@RequestBody Map<String, String> request) {
+        categoryDAO.updateCategory(request);
+    }
+
+    @DeleteMapping("/category")
+    public void deleteCategory(@RequestBody Map<String, String> request) {
+        System.out.println("체크");
+        categoryDAO.deleteCategory(request);
     }
 }

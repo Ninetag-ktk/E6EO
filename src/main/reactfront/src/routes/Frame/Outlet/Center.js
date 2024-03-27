@@ -40,10 +40,15 @@ const Center = ({setMainCalendar, events, setEvents, onSave, noteRef, categories
         noteListDate(calendarTitle);
     };
 
-    const renderEvent = (event) => {
-        const divElement = event.el;
-        divElement.dataset.note = JSON.stringify(event.event.extendedProps.data);
-        return divElement;
+    // const renderEvent = (event) => {
+    //     const divElement = event.el;
+    //     divElement.dataset.note = JSON.stringify(event.event.extendedProps.data);
+    //     return divElement;
+    // }
+
+    const eventName = (e) => {
+        const categoryId = e.event.extendedProps.data.categoryId.toString();
+        return [e.event.extendedProps.data.type, categoryId.split("#")[1].replaceAll(".", "_")]
     }
 
     return (
@@ -55,7 +60,8 @@ const Center = ({setMainCalendar, events, setEvents, onSave, noteRef, categories
                 dayMaxEvents={true}
                 locale={'ko'}
                 events={events}
-                eventDidMount={renderEvent}
+                // eventDidMount={renderEvent}
+                eventClassNames={eventName}
                 selectable={true}
                 select={handleEventInsert}
                 eventClick={handleEventClick}

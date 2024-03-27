@@ -19,7 +19,8 @@ public class CategoryDAO extends GoogleAPI {
         // System.out.println(request);
         UsersEntity user = usersMapper.findByObserveToken(observe).get();
         Map<String, String> categories = categoryMapper.findById(user.getUserId()).get().getCategories();
-        // System.out.println(categories);
+        categories.values().removeAll(Arrays.asList(""));
+        System.out.println(categories);
         return categories;
     }
 
@@ -37,9 +38,10 @@ public class CategoryDAO extends GoogleAPI {
             getGoogleCategory(user.getUserId(), accessToken);
             return true;
         } else {
+            // 우선 리스트 목록을 조회
+            // keySet.toArray == 카테고리 id를 String 배열로 반환
             String[] categories = categoryMapper.findById(user.getUserId())
                     .get().getCategories().keySet().toArray(new String[0]);
-            // 우선 리스트 목록을 조회
             // 카테고리 목록에 없다면 데이터를 추가
             scanCategory(user, accessToken, categories);
             // categories를 decode
@@ -135,5 +137,20 @@ public class CategoryDAO extends GoogleAPI {
                 categoryMapper.addCategory(user.getUserId(), categoryId, tasksList.get(categoryId));
             }
         }
+    }
+
+    public void updateCategory(Map<String, String> request) {
+        UsersEntity user = usersMapper.findByObserveToken(request.get("observe")).get();
+        categoryMapper.updateCategory(user.getUserId(), request.get("key"), request.get("value"));
+    }
+
+    public void deleteCategory(Map<String, String> request) {
+        UsersEntity user = usersMapper.findByObserveToken(request.get("observe")).get();
+        if (request.get("key").startsWith("google")) {
+            categoryMapper.deleteCategoryGoogle(user.getUserId(), request.get("key"));
+        } else {
+            categoryMapper.deleteCategory(user.getUserId(), request.get("key"));
+        }
+        notesMapper.deleteByCategoryId(user.getUserId(), request.get("key"));
     }
 }

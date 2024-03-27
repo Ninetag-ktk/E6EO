@@ -56,7 +56,7 @@ public class UsersDAO extends GoogleAPI {
         Optional<UsersEntity> user = usersMapper.findById(users.getUserId());
         if (user.isEmpty()) {
             usersMapper.save(users);
-            CategoryEntity category = new CategoryEntity(users.getUserId());
+            CategoryEntity category = CategoryEntity.builder().userId(users.getUserId()).build();
             categoryMapper.save(category);
             categoryMapper.insertDefault(users.getUserId(), users.getNickName());
             return ResponseEntity.ok(true);

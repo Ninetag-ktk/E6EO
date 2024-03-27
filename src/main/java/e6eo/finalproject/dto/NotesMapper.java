@@ -16,11 +16,14 @@ public interface NotesMapper extends MongoRepository<NotesEntity, String> {
     @Query(value = "{ _id : ?0, category_id: {'$regex': '^?1.*'}}", delete = true)
     void deleteByIdWithUserId(String id, String UserId);
 
+    @Query(value = "{ 'category_id' :  { '$regex': '^?0#.*?1$' }}", delete = true)
+    void deleteByCategoryId(String UserId, String categoryId);
+
     @Query(value = "{ 'category_id' : { '$regex': '^?0' }}")
     List<NotesEntity> findByUserId(String userId);
 
-    @Query(value = "{ 'category_id' :  { '$regex': '^?0' }, " +
+    @Query(value = "{ 'category_id' :  { '$regex': '^?0#.*?3$' }, " +
             "$and : [{$or: [{'start_time': { $gte: ?1, $lte: ?2}},{ 'end_time': { $gte: ?1, $lte: ?2 }}]}]}")
-    List<NotesEntity> getNotes(String userId, String startTime, String endTime);
+    List<NotesEntity> getNotes(String userId, String startTime, String endTime, String categoryIds);
 
 }

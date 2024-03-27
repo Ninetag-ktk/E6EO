@@ -62,6 +62,14 @@ public class GoogleController {
         return ResponseEntity.ok(true);
     }
 
+    @PostMapping("/update") // 구글 연동 계정 로그인 시, 프론트가 가지고 있는 구글 액세스 토큰과 현재 연월을 기준으로 데이터를 검증
+    public void updateMonthly(@RequestBody Map<String, String> req) {
+        UsersEntity user = usersMapper.findByObserveToken(req.get("observe")).get();
+        if (!(user.getInnerId() == null)) {
+            notesDAO.checkGoogleNotes(req.get("observe"), req.get("token"), req.get("date"));
+        }
+    }
+    
     @PostMapping("/updateCheck")
     public void checkGoogleAccount(@RequestBody String observe) {
         // System.out.println("구글 데이터 업데이트");
@@ -75,8 +83,6 @@ public class GoogleController {
                 // 구글 데이터를 받아온 적이 없는 경우
                 // 데이터를 요청해서 받아옴
                 notesDAO.getGoogleNotes(user, accessToken);
-            } else {
-                notesDAO.checkGoogleNotes(user, accessToken);
             }
         }
     }
@@ -93,19 +99,10 @@ public class GoogleController {
         return ResponseEntity.ok(accessToken);
     }
 
-    @PostMapping("/monthly") // 구글 연동 계정 로그인 시, 프론트가 가지고 있는 구글 액세스 토큰과 현재 연월을 기준으로 데이터를 검증
-    public void updateMonthly(@RequestBody Map<String, String> req) {
-        UsersEntity user = usersMapper.findByObserveToken(req.get("observe")).get();
-        if (!(user.getInnerId() == null)) {
-            notesDAO.checkGoogleNotes(req.get("observe"), req.get("token"), req.get("date"));
-        }
-    }
-
     // 테스트 목적 컨트롤러 메서드
     @ResponseBody
     @PostMapping("/test")
     public void googleTest(@RequestBody Map<String, String> data) {
         System.out.println(data.get("observe"));
-        notesDAO.getGoogleNotes(data.get("observe"));
     }
 }

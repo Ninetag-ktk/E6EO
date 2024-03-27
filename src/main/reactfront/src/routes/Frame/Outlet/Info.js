@@ -35,6 +35,17 @@ export default function SignupForm() {
         });
     }, [])
 
+
+    function deleteCategoryListData() {
+        const indexDB = window.indexedDB.open("e6eo");
+        indexDB.onsuccess = (e) => {
+            const db = e.target.result;
+            const transaction = db.transaction("categories_checked", "readwrite");
+            const objectStore = transaction.objectStore("categories_checked");
+            objectStore.clear();
+        }
+    }
+
     const handleDisconnectGoogle = () => {
         var answer = prompt('정말 연동 해제하시겠습니까?\n연동 해제하시려면 \<연동 해제\> 라고 입력해주세요', '');
         if (answer === "연동 해제") {
@@ -114,6 +125,7 @@ export default function SignupForm() {
                 if (response.data == true) {
                     window.localStorage.removeItem("observe");
                     window.sessionStorage.removeItem("observe");
+                    deleteCategoryListData();
                     alert("정상적으로 탈퇴되었습니다.\n이용해 주셔서 감사합니다");
                     redirect("/");
                 } else {

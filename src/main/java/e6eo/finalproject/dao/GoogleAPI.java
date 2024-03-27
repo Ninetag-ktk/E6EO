@@ -73,7 +73,9 @@ public class GoogleAPI {
         return scope.toString();
     }
 
-
+    // 프론트에서 넘겨주는 calendarTitle 데이터를 date 데이터 타입으로 변환하는 메서드
+    // calendarTitle은 yyyy-MM 데이터
+    // 한달치 데이터를 가져오기 위한 메서드
     protected Map<String, String> calcDateTime() {
         Map<String, String> dateTime = new HashMap<>();
         String updateTimeStamp = LocalDate.now().withDayOfMonth(1).atStartOfDay() + ":00Z";
@@ -89,6 +91,9 @@ public class GoogleAPI {
         return dateTime;
     }
 
+    // 프론트에서 넘겨주는 calendarTitle 데이터를 date 데이터 타입으로 변환하는 메서드
+    // calendarTitle은 yyyy-MM 데이터
+    // 3개월치의 데이터를 가져오기 위한 메서드
     protected Map<String, String> calcDateTime(String dateData) {
         // String dateData을 yyyyMM 또는 yyyyM 형태로 변형
         String date = dateData.replaceAll("[^\\d]", "");
@@ -277,7 +282,7 @@ public class GoogleAPI {
         // 엑세스 토큰만 리턴하여 바로 사용할 수 있게끔 함
         return token.getAccess_token();
     }
-    
+
     // 사후 구글 연동
     public void mergeGoogleAccount(Map<String, String> observes) {
         UsersEntity login = usersMapper.findByObserveToken(observes.get("loginsession")).get();

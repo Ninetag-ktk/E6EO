@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import axios from "axios";
-import {deleteNote, insertNote} from "./googleCRUD";
+import {deleteNote, insertNote, patchNote} from "./googleCRUD";
 
 export default function ({noteRef, categories, closeModal}) {
     const [noteCategory, setNoteCategory] = useState('');
@@ -715,7 +715,7 @@ export default function ({noteRef, categories, closeModal}) {
 
     function patchNoteHandler() {
         if (note.categoryId.startsWith("google")) {
-            axios(insertNote(note, allDay))
+            axios(patchNote(note, allDay))
                 .then(response => {
                     // console.log(response.data);
                     axios.patch("/notes/note", {

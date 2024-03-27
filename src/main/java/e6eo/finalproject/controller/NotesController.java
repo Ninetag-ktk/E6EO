@@ -15,8 +15,8 @@ public class NotesController {
     @Autowired
     private NotesDAO notesDAO;
 
-    @PostMapping("")
-    public ResponseEntity<?> getNotes(@RequestBody Map<String, String> request) {
+    @PostMapping("") // 노트 리스트를 프론트로 반환
+    public ResponseEntity<?> getNotes(@RequestBody Map<String, Object> request) {
         return ResponseEntity.ok(notesDAO.notesGet(request));
     }
 

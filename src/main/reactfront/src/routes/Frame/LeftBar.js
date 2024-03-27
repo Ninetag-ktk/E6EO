@@ -1,8 +1,9 @@
 import React, {useState} from "react";
 import {useNavigate} from "react-router-dom";
+import axios from "axios";
 
 
-export default function LeftBar({categories, categoryLoading, userName}) {
+export default function LeftBar({categories, setCategories, categoryLoading, userName}) {
     const redirect = useNavigate();
     const [title, setTitle] = useState('');
     const [startDate, setStartDate] = useState('');
@@ -14,6 +15,7 @@ export default function LeftBar({categories, categoryLoading, userName}) {
     const [userMenuVisible, setUserMenuVisible] = useState(true);
 
     const userMenu = document.querySelector(".userMenu");
+
     const handlerUserMenu = async () => {
         setUserMenuVisible(!userMenuVisible);
         if (userMenuVisible) {
@@ -31,9 +33,11 @@ export default function LeftBar({categories, categoryLoading, userName}) {
         window.sessionStorage.removeItem("observe");
         window.sessionStorage.removeItem("token");
         window.localStorage.removeItem("observe");
+        deleteCategoryListData();
         redirect("/");
     }
 
+    // 카테고리의 체크박스 설정이 바뀌면 indexedDB 의 데이터 수정
     function categoryHandler(e) {
         if (e.target.getAttribute("type") === "checkbox") {
             const categoryId = e.target.value;
@@ -45,11 +49,18 @@ export default function LeftBar({categories, categoryLoading, userName}) {
                 const objectStore = transaction.objectStore("categories_checked");
                 objectStore.put({categoryId, value: isChecked});
             }
+            const categoryIndex = categories.findIndex((category) => category[0] === categoryId);
+            if (categoryIndex !== -1) {
+                const newCategories = [...categories];
+                newCategories[categoryIndex][2] = isChecked;
+                setCategories(newCategories);
+            }
         }
     }
 
-    function categoryInputHandler(category) {
-        const categoryEl = document.querySelector(`#${category[0]} + label .categoryName .changeName`);
+    // 카테고리 편집을 눌렀을 때 입력 가능한 input 창으로 전환되는 함수
+    function categoryEditHandler(category) {
+        const categoryEl = document.querySelector(`#${CSS.escape(category[0])} + label .categoryName .changeName`);
         if (categoryEl.getAttribute("readonly") !== null) {
             categoryEl.focus();
             categoryEl.removeAttribute("readonly");
@@ -58,7 +69,7 @@ export default function LeftBar({categories, categoryLoading, userName}) {
             categoryEl.style.setProperty("pointer-events", "auto");
             categoryEl.addEventListener("keydown", (e) => {
                 if (e.key === "Enter") {
-                    categoryInputHandler(category)
+                    categoryEditHandler(category);
                 } else if (e.key === "Escape") {
                     categoryEl.setAttribute("readonly", "true");
                     categoryEl.removeAttribute("style");
@@ -67,17 +78,46 @@ export default function LeftBar({categories, categoryLoading, userName}) {
                 }
             })
         } else {
-            // console.log(category[0], categoryEl.value);
+            console.log(category[0], categoryEl.value);
             categoryEl.setAttribute("readonly", "true");
             categoryEl.removeAttribute("style");
             categoryEl.style.setProperty("pointer-events", "none");
+            if (category[1] !== categoryEl.value) {
+                axios.patch("/categories/category", {
+                    observe: window.sessionStorage.getItem("observe"),
+                    key: category[0],
+                    value: categoryEl.value,
+                })
+            }
+        }
+    }
+
+    function categoryDeleteHandler(category) {
+        if (window.confirm("내부의 노트도 모두 삭제됩니다.\r정말 삭제하시겠습니까?")) {
+            axios.delete("/categories/category", {
+                data: {
+                    observe: window.sessionStorage.getItem("observe"),
+                    key: category[0],
+                }
+            })
+        }
+    }
+
+
+    function deleteCategoryListData() {
+        const indexDB = window.indexedDB.open("e6eo");
+        indexDB.onsuccess = (e) => {
+            const db = e.target.result;
+            const transaction = db.transaction("categories_checked", "readwrite");
+            const objectStore = transaction.objectStore("categories_checked");
+            objectStore.clear();
         }
     }
 
 
     return (<div className="leftbar">
         <div className="schedule">
-            <div className="headLabel">캘린더 리스트
+            <div className="headLabel">카테고리 리스트
                 <div className="iconButton" onClick={toggleCategoryCreate}>
                     <svg xmlns="http://www.w3.org/2000/svg" height="100%" viewBox="0 0 40 40" fill="none"
                          stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"
@@ -100,15 +140,13 @@ export default function LeftBar({categories, categoryLoading, userName}) {
                             </div>
                         </label>
                         <span className={"iconButtonContainer"}>
-                            {/*categoryId가 google로 시작하면 edit 버튼을 숨김*/}
-                            {!category[0].toString().startsWith("google") ?
-                                <span className={"iconButton edit"} onClick={() => categoryInputHandler(category)}>
+                                <span className={"iconButton edit"} onClick={() => categoryEditHandler(category)}>
                                 <svg focusable="false" width="20" height="20" viewBox="0 0 24 24">
                                     <path
                                         d="M20.41 4.94l-1.35-1.35c-.78-.78-2.05-.78-2.83 0L3 16.82V21h4.18L20.41 7.77c.79-.78.79-2.05 0-2.83zm-14 14.12L5 19v-1.36l9.82-9.82 1.41 1.41-9.82 9.83z"></path>
                                 </svg>
-                            </span> : null}
-                            <span className={"iconButton delete"}>
+                            </span>
+                            <span className={"iconButton delete"} onClick={() => categoryDeleteHandler(category)}>
                                 <svg focusable="false" width="20" height="20" viewBox="0 0 24 24">
                                     <path
                                         d="M15 4V3H9v1H4v2h1v13c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V6h1V4h-5zm2 15H7V6h10v13z"/>
