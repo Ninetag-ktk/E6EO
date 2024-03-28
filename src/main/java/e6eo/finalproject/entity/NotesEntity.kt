@@ -1,106 +1,101 @@
-package e6eo.finalproject.entity;
+package e6eo.finalproject.entity
 
+import lombok.Data
+import lombok.NoArgsConstructor
+import org.bson.types.ObjectId
+import org.springframework.data.annotation.Id
+import org.springframework.data.mongodb.core.mapping.Document
+import org.springframework.data.mongodb.core.mapping.Field
 
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.bson.types.ObjectId;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.mapping.Field;
-
-import java.util.Map;
 
 @Document(collection = "notes")
 @Data
 @NoArgsConstructor
-public class NotesEntity {
+class NotesEntity(
     @Id
     @Field(name = "_id")
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private Object id;
+    var id: Any? = null,
+
     @Field(name = "category_id")
-    private Object categoryId;
+    var categoryId: Any? = null,
+
     @Field(name = "type")
-    private Object type;
+    var type: Any? = null,
+
     @Field(name = "status")
-    private Object status;
+    var status: Any? = null,
+
     @Field(name = "start_time")
-    private Object startTime;
+    var startTime: Any? = null,
+
     @Field(name = "end_time")
-    private Object endTime;
+    var endTime: Any? = null,
+
     @Field(name = "title")
-    private Object title;
+    var title: Any? = null,
+
     @Field(name = "contents")
-    private Object contents;
+    var contents: Any? = null,
+
     @Field(name = "etag")
-    private Object etag;
+    var etag: Any? = null,
+
     @Field(name = "have_repost")
-    private Object haveRepost;
+    var haveRepost: Any? = null,
+) {
 
-    @Builder
-    public NotesEntity(Object id, Object categoryId, Object type, Object status, Object startTime, Object endTime, Object title, Object contents, Object etag, Object haveRepost) {
-        this.id = id;
-        this.categoryId = categoryId;
-        this.type = type;
-        this.status = status;
-        this.startTime = startTime;
-        this.endTime = endTime;
-        this.title = title;
-        this.contents = contents;
-        this.etag = etag;
-        this.haveRepost = haveRepost;
+    fun eventParser(event: Map<String, Any>, userId: String, category: String): NotesEntity {
+        val start = event["start"] as Map<String, String>
+        val end = event["end"] as Map<String, String>
+        val kind = event["kind"].toString().split("#".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[1]
+        val note = NotesEntity(
+            id = event["id"],
+            categoryId = if (category.startsWith("google^")) userId + "#" + category.replace(
+                "_".toRegex(),
+                "."
+            ) else "$userId#google^calendar^$category",
+            type = kind,
+            status = event["status"],
+            startTime = if (start["date"] != null) start["date"] else start["dateTime"],
+            endTime = if (end["date"] != null) end["date"] else end["dateTime"],
+            title = event["summary"],
+            contents = event["description"],
+            etag = event["etag"]
+        )
+        return note
     }
 
-    public NotesEntity eventParser(Map<String, Object> event, String userId, String category) {
-        Map<String, String> start = (Map<String, String>) event.get("start");
-        Map<String, String> end = (Map<String, String>) event.get("end");
-        String kind = event.get("kind").toString().split("#")[1];
-        NotesEntity note = NotesEntity.builder()
-                .id(event.get("id"))
-                .categoryId(category.startsWith("google^") ? userId + "#" + category.replaceAll("_", ".") : userId + "#google^calendar^" + category)
-                .type(kind)
-                .status(event.get("status"))
-                .startTime(start.get("date") != null ? start.get("date") : start.get("dateTime"))
-                .endTime(end.get("date") != null ? end.get("date") : end.get("dateTime"))
-                .title(event.get("summary"))
-                .contents(event.get("description"))
-                .etag(event.get("etag"))
-                .build();
-        return note;
+    fun taskParser(task: Map<String, Any>, userId: String, category: String): NotesEntity {
+        val kind = task["kind"].toString().split("#".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[1]
+        val note = NotesEntity(
+            id = task["id"],
+            categoryId = if (category.startsWith("google^")) userId + "#" + category.replace(
+                "_".toRegex(),
+                "."
+            ) else "$userId#google^tasks^$category",
+            type = kind,
+            status = if (task["deleted"] == null) task["status"] else "cancelled",
+            startTime = task["due"],
+            endTime = task["due"],
+            title = task["title"],
+            contents = task["notes"],
+            etag = task["etag"]
+        )
+        return note
     }
 
-    public NotesEntity taskParser(Map<String, Object> task, String userId, String category) {
-        String kind = task.get("kind").toString().split("#")[1];
-        NotesEntity note = NotesEntity.builder()
-                .id(task.get("id"))
-                .categoryId(category.startsWith("google^") ? userId + "#" + category.replaceAll("_", ".") : userId + "#google^tasks^" + category)
-                .type(kind)
-                .status(task.get("deleted") == null ? task.get("status") : "cancelled")
-                .startTime(task.get("due"))
-                .endTime(task.get("due"))
-                .title(task.get("title"))
-                .contents(task.get("notes"))
-                .etag(task.get("etag"))
-                .build();
-        return note;
-    }
-
-    public NotesEntity dataParser(Map<String, Object> notedata, String userId) {
-        NotesEntity note = NotesEntity.builder()
-                .id(notedata.get("id") == null ? new ObjectId().toString() : notedata.get("id"))
-                .categoryId(userId + "#" + notedata.get("categoryId"))
-                .type(notedata.get("type"))
-                .status(notedata.get("status"))
-                .startTime(notedata.get("startTime"))
-                .endTime(notedata.get("endTime"))
-                .title(notedata.get("title"))
-                .contents(notedata.get("contents"))
-                .etag(notedata.get("etag"))
-                .build();
-        System.out.println(note);
-        return note;
+    fun dataParser(notedata: Map<String, Any>, userId: String): NotesEntity {
+        val note = NotesEntity(
+            id = if (notedata["id"] == null) ObjectId().toString() else notedata["id"],
+            categoryId = "$userId#${notedata["categoryId"]}",
+            type = notedata["type"],
+            status = notedata["status"],
+            startTime = notedata["startTime"],
+            endTime = notedata["endTime"],
+            title = notedata["title"],
+            contents = notedata["contents"],
+            etag = notedata["etag"]
+        )
+        return note
     }
 }

@@ -1,14 +1,12 @@
-package e6eo.finalproject.entity;
+package e6eo.finalproject.entity
 
-import lombok.Getter;
-import lombok.Setter;
-
-import java.util.Map;
+import lombok.Getter
+import lombok.Setter
 
 @Getter
 @Setter
-public class NoteData {
-    private String observe;
-    private String categoryId = null;
-    private Map<String, Object> note;
-}
+class NoteData(
+    var observe: String? = null,
+    var categoryId: String? = null,
+    var note: Map<String, Any>? = null
+)

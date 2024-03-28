@@ -1,23 +1,22 @@
-package e6eo.finalproject.entityGoogle;
+package e6eo.finalproject.entityGoogle
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import java.math.BigInteger;
+import lombok.AllArgsConstructor
+import lombok.Builder
+import lombok.Data
+import lombok.NoArgsConstructor
+import java.math.BigInteger
 
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class googleUserInfo {
-    private BigInteger id;
-    private String email;
-    private boolean verified_email;
-    private String name;
-    private String given_name;
-    private String family_name;
-    private String picture;
-    private String locale;
-}
+class googleUserInfo(
+        var id: BigInteger,
+        var email: String,
+        var verified_email: Boolean,
+        var name: String,
+        var given_name: String,
+        var family_name: String,
+        var picture: String,
+        var locale: String
+)

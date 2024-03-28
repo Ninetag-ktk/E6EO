@@ -1,67 +1,64 @@
-package e6eo.finalproject.dao;
+package e6eo.finalproject.dao
 
-import e6eo.finalproject.entity.CategoryEntity;
-import e6eo.finalproject.entity.UsersEntity;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import e6eo.finalproject.entity.CategoryEntity
+import e6eo.finalproject.entity.UsersEntity
+import lombok.RequiredArgsConstructor
+import lombok.extern.slf4j.Slf4j
+import org.springframework.http.ResponseEntity
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class UsersDAO extends GoogleAPI {
-
-    public ResponseEntity<?> expire(String id) {
+class UsersDAO : GoogleAPI() {
+    fun expire(id: String): ResponseEntity<*> {
         try {
-            notesMapper.deleteAllByUserId(id);
-            categoryMapper.deleteById(id);
-            usersMapper.deleteById(id);
-            return ResponseEntity.ok(true);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.ok(false);
+            notesMapper.deleteAllByUserId(id)
+            categoryMapper.deleteById(id)
+            usersMapper.deleteById(id)
+            return ResponseEntity.ok(true)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return ResponseEntity.ok(false)
         }
     }
 
-    public ResponseEntity<?> login(String id, String pw) {
+    fun login(id: String, pw: String): ResponseEntity<*> {
 //        System.out.println(id);
-        Map<String, String> result = new HashMap<>();
-        Optional<UsersEntity> user = usersMapper.findById(id);
-        if (user.isEmpty()) {
+        val result: MutableMap<String, String?> = HashMap()
+        val user = usersMapper.findById(id)
+        if (user.isEmpty) {
 //            System.out.println("noId");
-            result.put("code", "400");
-            result.put("body", "가입되지 않은 아이디입니다");
-            return ResponseEntity.badRequest().body(result);
-        } else if (!pw.equals(user.get().getPw())) {
+            result["code"] = "400"
+            result["body"] = "가입되지 않은 아이디입니다"
+            return ResponseEntity.badRequest().body<Map<String, String?>>(result)
+        } else if (pw != user.get().pw) {
 //            System.out.println("noPw");
-            result.put("code", "400");
-            result.put("body", "비밀번호가 일치하지 않습니다");
-            return ResponseEntity.badRequest().body(result);
+            result["code"] = "400"
+            result["body"] = "비밀번호가 일치하지 않습니다"
+            return ResponseEntity.badRequest().body<Map<String, String?>>(result)
         } else {
 //            System.out.println("ok");
-            result.put("code", "200");
-            result.put("body", tokenManager.setObserve(id));
-            return ResponseEntity.ok(result);
+            result["code"] = "200"
+            result["body"] = tokenManager.setObserve(id)
+            return ResponseEntity.ok<Map<String, String?>>(result)
         }
     }
 
-    public ResponseEntity<?> userJoin(UsersEntity users) {
-        Optional<UsersEntity> user = usersMapper.findById(users.getUserId());
-        if (user.isEmpty()) {
-            usersMapper.save(users);
-            CategoryEntity category = CategoryEntity.builder().userId(users.getUserId()).build();
-            categoryMapper.save(category);
-            categoryMapper.insertDefault(users.getUserId(), users.getNickName());
-            return ResponseEntity.ok(true);
+    fun userJoin(users: UsersEntity): ResponseEntity<*> {
+        val user = usersMapper.findById(users.userId!!)
+        if (user.isEmpty) {
+            usersMapper.save(users)
+            val category = CategoryEntity(
+                userId = users.userId!!
+            )
+            categoryMapper.save(category)
+            categoryMapper.saveDefault(users.userId!!, users.nickName!!)
+            return ResponseEntity.ok(true)
         } else {
-            return ResponseEntity.ok(false);
+            return ResponseEntity.ok(false)
         }
     }
 }

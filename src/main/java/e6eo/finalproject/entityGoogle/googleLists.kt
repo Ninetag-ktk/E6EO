@@ -1,16 +1,16 @@
-package e6eo.finalproject.entityGoogle;
+package e6eo.finalproject.entityGoogle
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor
+import lombok.Builder
+import lombok.Data
+import lombok.NoArgsConstructor
 
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class googleLists {
-    private String kind;
-    private String etag;
-    private Object items;
-}
+class googleLists(
+        var kind: String?,
+        var etag: String?,
+        var items: Any?
+)

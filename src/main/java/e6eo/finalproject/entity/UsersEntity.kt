@@ -1,38 +1,31 @@
-package e6eo.finalproject.entity;
+package e6eo.finalproject.entity
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import lombok.Data
+import lombok.NoArgsConstructor
 
 @Entity(name = "users")
 @Data
 @NoArgsConstructor
-public class UsersEntity {
+data class UsersEntity(
     @Id
     @Column(name = "user_id", unique = true, nullable = false)
-    private String userId;
+    var userId: String? = null,
+
     @Column(name = "pw", nullable = true)
-    private String pw;
+    var pw: String? = null,
+
     @Column(name = "nickname", nullable = false)
-    private String nickName;
+    var nickName: String? = null,
+
     @Column(name = "observe_token", nullable = true, unique = true)
-    private String observeToken;
+    var observeToken: String? = null,
+
     @Column(name = "inner_id", nullable = true)
-    private String innerId;
+    var innerId: String? = null,
+
     @Column(name = "refresh_token", nullable = true)
-    private String refreshToken;
-
-    @Builder
-    public UsersEntity(String userId, String pw, String nickName, String innerId, String refreshToken) {
-        this.userId = userId;
-        this.pw = pw;
-        this.nickName = nickName;
-        this.innerId = innerId;
-        this.refreshToken = refreshToken;
-    }
-
-
-}
+    var refreshToken: String? = null
+)

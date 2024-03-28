@@ -1,225 +1,241 @@
-package e6eo.finalproject.dao;
+package e6eo.finalproject.dao
 
-import e6eo.finalproject.entity.CategoryEntity;
-import e6eo.finalproject.entity.NoteData;
-import e6eo.finalproject.entity.NotesEntity;
-import e6eo.finalproject.entity.UsersEntity;
-import e6eo.finalproject.entityGoogle.googleLists;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-
-import java.util.*;
-import java.util.stream.Collectors;
+import e6eo.finalproject.entity.NoteData
+import e6eo.finalproject.entity.NotesEntity
+import e6eo.finalproject.entity.UsersEntity
+import e6eo.finalproject.entityGoogle.googleLists
+import lombok.RequiredArgsConstructor
+import org.springframework.http.codec.ClientCodecConfigurer
+import org.springframework.stereotype.Service
+import org.springframework.web.reactive.function.client.WebClient
+import java.util.stream.Collectors
 
 @Service
 @RequiredArgsConstructor
-public class NotesDAO extends GoogleAPI {
-
+class NotesDAO : GoogleAPI() {
     // 전달받은 월 데이터 기준, 앞뒤를 포함해 3개월치의 데이터를 체크
-    public void checkGoogleNotes(String observe, String accessToken, String date) {
-        UsersEntity user = usersMapper.findByObserveToken(observe).get();
-        List<NotesEntity> notes = notesMapper.findByUserId(user.getUserId());
-        Map<Object, Object> notesEtag = notes.stream().collect(Collectors.toMap(NotesEntity::getId, NotesEntity::getEtag));
-        Optional<CategoryEntity> category = categoryMapper.findById(user.getUserId());
-        Map<String, ArrayList<String>> categories = new HashMap<>();
-        if (!(category.isEmpty())) {
-            categories = decodeCategory(category.get().getCategories().keySet().toArray(new String[0]));
+    fun checkGoogleNotes(observe: String?, accessToken: String, date: String) {
+        val user = usersMapper.findByObserveToken(observe)!!
+        val notes = notesMapper.findByUserId(user.userId!!!!)!!
+        val notesEtag: Map<Any, Any?> = notes.stream().collect(
+            Collectors.toMap({ obj: NotesEntity -> obj.id },
+                { obj: NotesEntity -> obj.etag })
+        )
+        val category = categoryMapper.findById(user.userId!!!!)
+        var categories: Map<String, ArrayList<String>> = HashMap()
+        if (!(category.isEmpty)) {
+            categories = decodeCategory(category.get().categories!!.keys.toTypedArray<String>())
         } else {
 //            System.out.println("카테고리 비어있음");
         }
-        scanCalendarNotes(notesEtag, noteCalendar(user.getUserId(), categories.get("calendar"), accessToken, date));
-        scanTasksNotes(notesEtag, noteTasks(user.getUserId(), categories.get("tasks"), accessToken, date));
+        scanCalendarNotes(notesEtag, noteCalendar(user.userId!!!!, categories["calendar"]!!, accessToken, date))
+        scanTasksNotes(notesEtag, noteTasks(user.userId!!!!, categories["tasks"]!!, accessToken, date))
     }
 
-    private void scanCalendarNotes(Map<Object, Object> notesEtag, ArrayList<NotesEntity> noteCalendar) {
-        int i = 0;
-        for (NotesEntity note : noteCalendar) {
+    private fun scanCalendarNotes(notesEtag: Map<Any, Any?>, noteCalendar: ArrayList<NotesEntity>) {
+        var i = 0
+        for (note in noteCalendar) {
 //            System.out.println(note);
-            if (note.getStatus().toString().equals("cancelled") && notesEtag.get(note.getId()) != null) {
+            if (note.status.toString() == "cancelled" && notesEtag[note.id] != null) {
 //                System.out.println(note);
-                notesMapper.delete(note);
-                i++;
-            } else if (!note.getStatus().toString().equals("cancelled") && !note.getEtag().equals(notesEtag.get(note.getId()))) {
+                notesMapper.delete(note)
+                i++
+            } else if (note.status.toString() != "cancelled" && note.etag != notesEtag[note.id]) {
 //                System.out.println(note);
-                notesMapper.save(note);
-                i++;
+                notesMapper.save(note)
+                i++
             }
         }
-//        System.out.println("캘린더 event 업데이트 개수 : " + i);
+        //        System.out.println("캘린더 event 업데이트 개수 : " + i);
     }
 
-    private void scanTasksNotes(Map<Object, Object> notesEtag, ArrayList<NotesEntity> noteTasks) {
-        int i = 0;
-        for (NotesEntity note : noteTasks) {
+    private fun scanTasksNotes(notesEtag: Map<Any, Any?>, noteTasks: ArrayList<NotesEntity>) {
+        var i = 0
+        for (note in noteTasks) {
 //            System.out.println(note);
-            if (note.getStatus().toString().equals("cancelled") && notesEtag.get(note.getId()) != null) {
+            if (note.status.toString() == "cancelled" && notesEtag[note.id] != null) {
 //                System.out.println(note);
-                notesMapper.delete(note);
-                i++;
-            } else if (!note.getStatus().toString().equals("cancelled") && !note.getEtag().equals(notesEtag.get(note.getId()))) {
+                notesMapper.delete(note)
+                i++
+            } else if (note.status.toString() != "cancelled" && note.etag != notesEtag[note.id]) {
 //                System.out.println(note);
-                notesMapper.save(note);
-                i++;
+                notesMapper.save(note)
+                i++
             }
         }
-//        System.out.println("태스트 task 업데이트 개수 : " + i);
+        //        System.out.println("태스트 task 업데이트 개수 : " + i);
     }
 
     // 데이터 최초로 가져오기
-    public void getGoogleNotes(UsersEntity user, String accessToken) {
-        String[] categories = categoryMapper.findById(user.getUserId()).get().getCategories().keySet().toArray(new String[0]);
-        Map<String, ArrayList<String>> categoryMap = decodeCategory(categories);
-        notesMapper.saveAll(noteCalendar(user.getUserId(), categoryMap.get("calendar"), accessToken));
-        notesMapper.saveAll(noteTasks(user.getUserId(), categoryMap.get("tasks"), accessToken));
-        System.out.println("GetNotesFromGoogle_Complete");
+    fun getGoogleNotes(user: UsersEntity, accessToken: String) {
+        val categories = categoryMapper.findById(user.userId!!).get().categories!!.keys.toTypedArray<String>()
+        val categoryMap = decodeCategory(categories)
+        notesMapper.saveAll(noteCalendar(user.userId!!, categoryMap["calendar"]!!, accessToken))
+        notesMapper.saveAll(noteTasks(user.userId!!, categoryMap["tasks"]!!, accessToken))
+        println("GetNotesFromGoogle_Complete")
     }
 
-    private ArrayList<NotesEntity> noteCalendar(String userId, ArrayList<String> list, String accessToken) {
-        ArrayList<NotesEntity> notes = new ArrayList<>();
-        WebClient webClient = WebClient.builder().codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(-1))
-                .baseUrl("https://www.googleapis.com/calendar/v3/calendars/")
-                .defaultHeaders(reqHeader(accessToken))
-                .build();
-        Map<String, String> dateTime = calcDateTime();
-        String requestUrl = null;
+    private fun noteCalendar(userId: String, list: ArrayList<String>, accessToken: String): ArrayList<NotesEntity> {
+        val notes = ArrayList<NotesEntity>()
+        val webClient = WebClient.builder()
+            .codecs { configurer: ClientCodecConfigurer -> configurer.defaultCodecs().maxInMemorySize(-1) }
+            .baseUrl("https://www.googleapis.com/calendar/v3/calendars/")
+            .defaultHeaders(reqHeader(accessToken))
+            .build()
+        val dateTime = calcDateTime()
         // date 가 없으면 showDeleted = false
-        requestUrl = "/events?orderBy=updated&showDeleted=false&singleEvents=true"
-                + "&timeMin=" + dateTime.get("start")
-                + "&timeMax=" + dateTime.get("end")
-                + "&timeZone=GMT+9"
-//                + "&updatedMin=" + dateTime.get("update")
-                + "&key=" + googleKey;
-        for (String calendar : list) {
-            Object json = webClient.get().uri(calendar + requestUrl)
-                    .retrieve().bodyToMono(googleLists.class).block().getItems();
-            for (Map<String, Object> event : (ArrayList<Map>) json) {
-                NotesEntity note = new NotesEntity().eventParser(event, userId, calendar);
-                notes.add(note);
+        val requestUrl: String = ("/events?orderBy=updated&showDeleted=false&singleEvents=true"
+                + "&timeMin=" + dateTime["start"]
+                + "&timeMax=" + dateTime["end"]
+                + "&timeZone=GMT+9" //                + "&updatedMin=" + dateTime.get("update")
+                + "&key=" + googleKey)
+        for (calendar in list) {
+            val json = webClient.get().uri(calendar + requestUrl)
+                .retrieve().bodyToMono(googleLists::class.java).block()!!.items
+            for (event in json as ArrayList<Map<String, Any>>) {
+                val note = NotesEntity().eventParser(event, userId, calendar)
+                notes.add(note)
             }
         }
-        return notes;
+        return notes
     }
 
-    private ArrayList<NotesEntity> noteCalendar(String userId, ArrayList<String> list, String accessToken, String date) {
-        ArrayList<NotesEntity> notes = new ArrayList<>();
-        WebClient webClient = WebClient.builder().codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(-1))
-                .baseUrl("https://www.googleapis.com/calendar/v3/calendars/")
-                .defaultHeaders(reqHeader(accessToken))
-                .build();
-        Map<String, String> dateTime = calcDateTime(date);
-        String requestUrl = "/events?orderBy=updated"
+    private fun noteCalendar(
+        userId: String,
+        list: ArrayList<String>,
+        accessToken: String,
+        date: String
+    ): ArrayList<NotesEntity> {
+        val notes = ArrayList<NotesEntity>()
+        val webClient = WebClient.builder()
+            .codecs { configurer: ClientCodecConfigurer -> configurer.defaultCodecs().maxInMemorySize(-1) }
+            .baseUrl("https://www.googleapis.com/calendar/v3/calendars/")
+            .defaultHeaders(reqHeader(accessToken))
+            .build()
+        val dateTime = calcDateTime(date)
+        val requestUrl = ("/events?orderBy=updated"
                 + "&showDeleted=true&singleEvents=true"
-                + "&timeMin=" + dateTime.get("start")
-                + "&timeMax=" + dateTime.get("end")
-                + "&timeZone=GMT+9&key=" + googleKey;
-        for (String calendar : list) {
-            Object json = webClient.get().uri(calendar + requestUrl)
-                    .retrieve().bodyToMono(googleLists.class).block().getItems();
-            for (Map<String, Object> event : (ArrayList<Map>) json) {
-                NotesEntity note = new NotesEntity().eventParser(event, userId, calendar);
-                notes.add(note);
+                + "&timeMin=" + dateTime["start"]
+                + "&timeMax=" + dateTime["end"]
+                + "&timeZone=GMT+9&key=" + googleKey)
+        for (calendar in list) {
+            val json = webClient.get().uri(calendar + requestUrl)
+                .retrieve().bodyToMono(googleLists::class.java).block()!!.items
+            for (event in json as ArrayList<Map<String, Any>>) {
+                val note = NotesEntity().eventParser(event, userId, calendar)
+                notes.add(note)
             }
         }
-        return notes;
+        return notes
     }
 
-    private ArrayList<NotesEntity> noteTasks(String userId, ArrayList<String> list, String accessToken) {
-        ArrayList<NotesEntity> notes = new ArrayList<>();
-        WebClient webClient = WebClient.builder().codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(-1))
-                .baseUrl("https://tasks.googleapis.com/tasks/v1/lists/")
-                .defaultHeaders(reqHeader(accessToken))
-                .build();
-        Map<String, String> dateTime = calcDateTime();
-        String requestUrl = null;
+    private fun noteTasks(userId: String, list: ArrayList<String>, accessToken: String): ArrayList<NotesEntity> {
+        val notes = ArrayList<NotesEntity>()
+        val webClient = WebClient.builder()
+            .codecs { configurer: ClientCodecConfigurer -> configurer.defaultCodecs().maxInMemorySize(-1) }
+            .baseUrl("https://tasks.googleapis.com/tasks/v1/lists/")
+            .defaultHeaders(reqHeader(accessToken))
+            .build()
+        val dateTime = calcDateTime()
         // date 가 없으면 showDeleted = false
-        requestUrl = "/tasks"
-                + "?dueMax=" + dateTime.get("end")
-                + "&dueMin=" + dateTime.get("start")
-                + "&showCompleted=true&showDeleted=false&showHidden=true"
-//                + "&updatedMin=" + dateTime.get("update")
-                + "&key" + googleKey;
-        for (String tasklist : list) {
-            Object json = webClient.get().uri(tasklist + requestUrl)
-                    .retrieve().bodyToMono(googleLists.class).block().getItems();
-            for (Map<String, Object> task : (ArrayList<Map>) json) {
-                NotesEntity note = new NotesEntity().taskParser(task, userId, tasklist);
-                notes.add(note);
+        val requestUrl: String = ("/tasks"
+                + "?dueMax=" + dateTime["end"]
+                + "&dueMin=" + dateTime["start"]
+                + "&showCompleted=true&showDeleted=false&showHidden=true" //                + "&updatedMin=" + dateTime.get("update")
+                + "&key" + googleKey)
+        for (tasklist in list) {
+            val json = webClient.get().uri(tasklist + requestUrl)
+                .retrieve().bodyToMono(googleLists::class.java).block()!!.items
+            for (task in json as ArrayList<Map<String, Any>>) {
+                val note = NotesEntity().taskParser(task, userId, tasklist)
+                notes.add(note)
             }
         }
-        return notes;
+        return notes
     }
 
-    private ArrayList<NotesEntity> noteTasks(String userId, ArrayList<String> list, String accessToken, String date) {
-        ArrayList<NotesEntity> notes = new ArrayList<>();
-        WebClient webClient = WebClient.builder().codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(-1))
-                .baseUrl("https://tasks.googleapis.com/tasks/v1/lists/")
-                .defaultHeaders(reqHeader(accessToken))
-                .build();
-        Map<String, String> dateTime = calcDateTime(date);
-        String requestUrl = "/tasks"
-                + "?dueMax=" + dateTime.get("end")
-                + "&dueMin=" + dateTime.get("start")
+    private fun noteTasks(
+        userId: String,
+        list: ArrayList<String>,
+        accessToken: String,
+        date: String
+    ): ArrayList<NotesEntity> {
+        val notes = ArrayList<NotesEntity>()
+        val webClient = WebClient.builder()
+            .codecs { configurer: ClientCodecConfigurer -> configurer.defaultCodecs().maxInMemorySize(-1) }
+            .baseUrl("https://tasks.googleapis.com/tasks/v1/lists/")
+            .defaultHeaders(reqHeader(accessToken))
+            .build()
+        val dateTime = calcDateTime(date)
+        val requestUrl = ("/tasks"
+                + "?dueMax=" + dateTime["end"]
+                + "&dueMin=" + dateTime["start"]
                 + "&showCompleted=true&showDeleted=true&showHidden=true"
-                + "&key" + googleKey;
-        for (String tasklist : list) {
-            Object json = webClient.get().uri(tasklist + requestUrl)
-                    .retrieve().bodyToMono(googleLists.class).block().getItems();
-            for (Map<String, Object> task : (ArrayList<Map>) json) {
-                NotesEntity note = new NotesEntity().taskParser(task, userId, tasklist);
-                notes.add(note);
+                + "&key" + googleKey)
+        for (tasklist in list) {
+            val json = webClient.get().uri(tasklist + requestUrl)
+                .retrieve().bodyToMono(googleLists::class.java).block()!!.items
+            for (task in json as ArrayList<Map<String, Any>>) {
+                val note = NotesEntity().taskParser(task, userId, tasklist)
+                notes.add(note)
             }
         }
-        return notes;
+        return notes
     }
 
-    public List<NotesEntity> notesGet(Map<String, Object> request) {
-        UsersEntity user = usersMapper.findByObserveToken(request.get("observe").toString()).get();
-//        System.out.println(user);
-        Map<String, String> dateRange = calcDateTime(request.get("date").toString());
-        List<List<Object>> categoryData = (List<List<Object>>) request.get("categoryData");
-        ArrayList<String> categoryIds = new ArrayList<>();
-        for (List<Object> category : categoryData) {
-            if ((boolean) category.get(2) == true) {
-                if (category.get(0).toString().contains("google")) {
-                    String[] categoryCode = category.get(0).toString().split("\\^");
-                    categoryIds.add(categoryCode[categoryCode.length - 1].replaceAll("_", "."));
+    fun notesGet(request: Map<String, Any>): List<NotesEntity> {
+        val user = usersMapper.findByObserveToken(request["observe"].toString())!!
+        //        System.out.println(user);
+        val dateRange = calcDateTime(request["date"].toString())
+        val categoryData = request["categoryData"] as List<List<Any>>
+        val categoryIds = ArrayList<String>()
+        for (category in categoryData) {
+            if (category[2] as Boolean) {
+                if (category[0].toString().contains("google")) {
+                    val categoryCode =
+                        category[0].toString().split("\\^".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+                    categoryIds.add(categoryCode[categoryCode.size - 1].replace("_".toRegex(), "."))
                 } else {
-                    categoryIds.add(category.get(0).toString());
+                    categoryIds.add(category[0].toString())
                 }
             }
         }
-//        System.out.println(categoryIds);
-        List<NotesEntity> notesList = new ArrayList<NotesEntity>();
-        for (String categoryId : categoryIds) {
-            notesList.addAll(notesMapper.getNotes(user.getUserId(), dateRange.get("start"), dateRange.get("end"), categoryId));
+        //        System.out.println(categoryIds);
+        val notesList: MutableList<NotesEntity> = ArrayList()
+        for (categoryId in categoryIds) {
+            notesList.addAll(
+                notesMapper.getNotes(
+                    user.userId!!,
+                    dateRange["start"]!!,
+                    dateRange["end"]!!,
+                    categoryId
+                )!!
+            )
         }
-//        System.out.println(notesList);
-        return notesList;
+        //        System.out.println(notesList);
+        return notesList
     }
 
-    public void insertNote(NoteData noteData) {
-        UsersEntity user = usersMapper.findByObserveToken(noteData.getObserve()).get();
-        NotesEntity note = null;
-        if (noteData.getCategoryId() != null) {
-            switch (noteData.getNote().get("kind").toString().split("#")[1]) {
-                case "event":
-                    note = new NotesEntity().eventParser(noteData.getNote(), user.getUserId(), noteData.getCategoryId());
-                    break;
-                case "task":
-                    note = new NotesEntity().taskParser(noteData.getNote(), user.getUserId(), noteData.getCategoryId());
-                    break;
+    fun insertNote(noteData: NoteData) {
+        val user = usersMapper.findByObserveToken(noteData.observe)!!
+        val note: NotesEntity =
+            if (noteData.categoryId != null) {
+                when (noteData.note!!["kind"].toString().split("#".toRegex()).dropLastWhile { it.isEmpty() }
+                    .toTypedArray()[1]) {
+                    "event" -> NotesEntity().eventParser(noteData.note!!, user.userId!!, noteData.categoryId!!)
+                    "task" -> NotesEntity().taskParser(noteData.note!!, user.userId!!, noteData.categoryId!!)
+                    else -> return println("에러")
+                }
+            } else {
+                NotesEntity().dataParser(noteData.note!!, user.userId!!)
             }
-        } else {
-            note = new NotesEntity().dataParser(noteData.getNote(), user.getUserId());
-        }
-        notesMapper.save(note);
-        System.out.println("체크 : " + note);
+        notesMapper.save(note)
+//        println("체크 : $note")
     }
 
-    public void deleteNote(NoteData noteData) {
-        UsersEntity user = usersMapper.findByObserveToken(noteData.getObserve()).get();
+    fun deleteNote(noteData: NoteData) {
+        val user = usersMapper.findByObserveToken(noteData.observe)!!
         // 유저 아이디를 기준으로 모든 노트 삭제
-        notesMapper.deleteByIdWithUserId(noteData.getNote().get("id").toString(), user.getUserId());
+        notesMapper.deleteByIdWithUserId(noteData.note!!["id"].toString(), user.userId!!)
     }
 }

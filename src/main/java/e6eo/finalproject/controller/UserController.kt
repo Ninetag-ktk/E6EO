@@ -1,85 +1,80 @@
-package e6eo.finalproject.controller;
+package e6eo.finalproject.controller
 
-import e6eo.finalproject.dao.UsersDAO;
-import e6eo.finalproject.dto.UsersMapper;
-import e6eo.finalproject.entity.UsersEntity;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
-import java.util.Optional;
+import e6eo.finalproject.dao.UsersDAO
+import e6eo.finalproject.dto.UsersMapper
+import e6eo.finalproject.entity.UsersEntity
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.ResponseEntity
+import org.springframework.stereotype.Controller
+import org.springframework.web.bind.annotation.*
 
 @Controller
 @RequestMapping("/user")
-public class UserController {
+class UserController {
+    @Autowired
+    private lateinit var usersDao: UsersDAO
 
     @Autowired
-    private UsersDAO usersDao;
-
-    @Autowired
-    private UsersMapper usersMapper;
+    private lateinit var usersMapper: UsersMapper
 
     @PostMapping("") // 사용자 닉네임 반환
-    public ResponseEntity<?> passUserNickName(@RequestBody String observe) {
-        return ResponseEntity.ok(usersMapper.findByObserveToken(observe.replace("\"", "")).get().getNickName());
+    fun passUserNickName(@RequestBody observe: String): ResponseEntity<*> {
+        return ResponseEntity.ok(usersMapper.findByObserveToken(observe.replace("\"", ""))!!.nickName)
     }
 
     @DeleteMapping("/google") // 구글 연동 해제
-    public ResponseEntity<?> disconnectGoogle(@RequestBody String observe) {
-        usersMapper.emptyInnerId(observe.replace("\"", ""));
-        return ResponseEntity.ok(true);
+    fun disconnectGoogle(@RequestBody observe: String): ResponseEntity<*> {
+        usersMapper.emptyInnerId(observe.replace("\"", ""))
+        return ResponseEntity.ok(true)
     }
 
     @PostMapping("/info") // 회원정보 조회
-    public ResponseEntity<?> patchUserData(@RequestBody String observe) {
-        Optional<UsersEntity> users = usersMapper.findByObserveToken(observe.replace("\"", ""));
-//        System.out.println("체크" + users);
-        return ResponseEntity.ok(users);
+    fun patchUserData(@RequestBody observe: String): ResponseEntity<*> {
+        val users = usersMapper.findByObserveToken(observe.replace("\"", ""))
+        //        System.out.println("체크" + users);
+        return ResponseEntity.ok(users)
     }
 
     @PatchMapping("/info") // 회원정보 수정
-    public ResponseEntity<?> changeUserInfo(@RequestBody UsersEntity user) {
+    fun changeUserInfo(@RequestBody user: UsersEntity): ResponseEntity<*> {
         try {
-            usersMapper.updateUserInfoById(user.getUserId(), user.getPw(), user.getNickName());
-//            usersMapper.emptyObserve(user.getObserveToken());
-            return ResponseEntity.ok(true);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.ok(false);
+            usersMapper.updateUserInfoById(user.userId, user.pw, user.nickName)
+            //            usersMapper.emptyObserve(user.getObserveToken());
+            return ResponseEntity.ok(true)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return ResponseEntity.ok(false)
         }
     }
 
     @DeleteMapping("/info") // 회원 탈퇴
-    public ResponseEntity<?> expireUserInfo(@RequestBody String observe) {
-        Optional<UsersEntity> user = usersMapper.findByObserveToken(observe.replace("\"", ""));
-        if (!(user.isEmpty())) {
-            return usersDao.expire(user.get().getUserId());
+    fun expireUserInfo(@RequestBody observe: String): ResponseEntity<*> {
+        val user = usersMapper.findByObserveToken(observe.replace("\"", ""))
+        return if (user != null) {
+            usersDao.expire(user.userId!!)
         } else {
-            return ResponseEntity.ok(false);
+            ResponseEntity.ok(false)
         }
     }
 
     @PostMapping("/login") // 로그인
-    public ResponseEntity<?> login(@RequestBody Map<String, String> req) {
+    fun login(@RequestBody req: Map<String, String>): ResponseEntity<*> {
 //        System.out.println(req.get("id"));
 //        System.out.println(req.get("pw"));
-        return usersDao.login(req.get("id"), req.get("pw"));
+        return usersDao.login(req["id"]!!, req["pw"]!!)
     }
 
     @PostMapping("/join") // 회원가입
-    public ResponseEntity<?> userJoin(@RequestBody UsersEntity users) {
-        System.out.println(users);
-        return usersDao.userJoin(users);
+    fun userJoin(@RequestBody users: UsersEntity): ResponseEntity<*> {
+        println(users)
+        return usersDao.userJoin(users)
     }
 
     @PostMapping("/checkToken") // 옵저브 토큰으로 계정 유효성 검사
-    public ResponseEntity<?> checkObserve(@RequestBody String observe) {
-        Optional<UsersEntity> user = usersMapper.findByObserveToken(observe.replace("\"", ""));
-        return !(user.isEmpty()) ? ResponseEntity.ok(true) : ResponseEntity.ok(false);
+    fun checkObserve(@RequestBody observe: String): ResponseEntity<*> {
+        val user: UsersEntity? = usersMapper.findByObserveToken(observe)
+        return if (user != null) ResponseEntity.ok(true) else ResponseEntity.ok(false)
     }
-
 }
 
 
